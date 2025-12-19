@@ -4,7 +4,7 @@ Last modified: 12/16/2025
 
 ACADEMIC INTEGRITY STATEMENT:
 adapted from my earlier CartPole project, discount_reward() and sample_traj() functions are direct copy;
-plotting codes by GenAI
+state traj plotting codes by GenAI
 """
 import numpy as np
 import tensorflow as tf
@@ -41,7 +41,7 @@ class QuadrotorEnv(gym.Env):
         self.L_arm = 0.1422         # arm length, m
         self.I_yy = 0.0015          # moment of inertia, kg*m^2
 
-        self.tau_max = 0.05         # max torque, N*m (from motor differential)
+        self.tau_max = 0.05         # restricted max torque, N*m (from motor differential)
         
         # state limits for termination
         self.y_max = 1.0                # max horizontal displacement, m
@@ -55,15 +55,13 @@ class QuadrotorEnv(gym.Env):
         
         # define action space
         if continuous:
-            self.action_space = spaces.Box(
-                low=-1.0, high=1.0, shape=(1,), dtype=np.float32
-            )
+            self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32)
         else:
             # discrete: 0=negative torque, 1=zero, 2=positive torque
             self.action_space = spaces.Discrete(3)
         
-        # observation space (generous bounds for learning)
-        high = np.array([2.0, 5.0, np.pi/4, 10.0], dtype=np.float32)
+        # obsv space (generous bounds for learning)
+        high = np.array([2.0, 5.0, np.pi / 4, 10.0], dtype=np.float32)
         self.observation_space = spaces.Box(-high, high, dtype=np.float32)
         
         self.render_mode = render_mode
@@ -87,17 +85,14 @@ class QuadrotorEnv(gym.Env):
     
     def step(self, action):
         y, y_dot, phi, phi_dot = self.state
-        
-        # convert action to torque
-        if self.continuous:
+        if self.continuous: # convert action to torque
             tau = float(action[0]) * self.tau_max
         else:
             # discrete: -1, 0, +1 scaled by tau_max
             tau = (action - 1) * self.tau_max
         
         # drone dynamics (Euler integration)
-        # phi_ddot = tau / I_yy
-        # y_ddot = g * sin(phi) ≈ g * phi for small angles
+        # phi_ddot = tau / I_yy, y_ddot = g * sin(phi) ≈ g * phi for small ang
         phi_ddot = tau / self.I_yy
         y_ddot = self.g * np.sin(phi)  # use full nonlinear for RL
         
@@ -114,7 +109,7 @@ class QuadrotorEnv(gym.Env):
         terminated = bool(abs(phi_new) > self.phi_max or abs(y_new) > self.y_max)
         truncated = self.steps >= self.max_steps
         
-        # reward: +1 for staying in bounds, bonus for being close to hover
+        # reward +1 for staying in bounds, bonus for being close to hover
         if not terminated:
             reward = 1.0
             # Small bonus for staying centered
@@ -136,7 +131,6 @@ class QuadrotorEnv(gym.Env):
         
         screen_width = 600
         screen_height = 400
-        
         if self.screen is None:
             pygame.init()
             if self.render_mode == 'human':
@@ -344,7 +338,7 @@ def main():
     print(f"state space: {obs_size} dimensions")
     print(f"action space: {act_size} discrete actions")
     print(f"drone mass: {env.m_total} kg")
-    print(f"mMax torque: {env.tau_max:.1f} N·m")
+    print(f"max torque: {env.tau_max:.1f} N·m")
     
     # hyperparams
     GAMMA = 0.99
